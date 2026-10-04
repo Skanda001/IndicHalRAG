@@ -1,0 +1,39 @@
+{
+  "total_annotated": 493,
+  "gemini": {
+    "correct": {
+      "count": 363,
+      "percentage": 73.63
+    },
+    "hallucinated": {
+      "count": 114,
+      "percentage": 23.12
+    },
+    "partial": {
+      "count": 14,
+      "percentage": 2.84
+    },
+    "refused": {
+      "count": 2,
+      "percentage": 0.41
+    }
+  },
+  "sarvam": {
+    "correct": {
+      "count": 394,
+      "percentage": 79.92
+    },
+    "hallucinated": {
+      "count": 86,
+      "percentage": 17.44
+    },
+    "partial": {
+      "count": 13,
+      "percentage": 2.64
+    },
+    "refused": {
+      "count": 0,
+      "percentage": 0.0
+    }
+  }
+}

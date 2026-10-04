@@ -1,0 +1,27 @@
+# Core orchestration
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+
+# Cloud LLMs
+langchain-google-genai>=2.0.0     # Gemini
+sarvamai>=0.1.0                   # Sarvam-30B / Sarvam-105B (Kannada-specialized)
+
+# Retrieval
+faiss-cpu>=1.8.0
+sentence-transformers>=3.0.0
+
+# ML / NLP
+torch>=2.1.0
+transformers>=4.40.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+
+# Visualization
+matplotlib>=3.8.0
+
+# Data + utils
+datasets>=2.20.0
+python-dotenv>=1.0.0
+tqdm>=4.66.0
+tenacity>=8.2.0                   # retry/backoff for API rate limits

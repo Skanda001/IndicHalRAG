@@ -1,0 +1,94 @@
+<!-- Label Studio XML configuration for HALRAG annotation project -->
+<!-- Import this in Label Studio → Project Settings → Labeling Interface -->
+
+<View>
+  <Style>
+    .container {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .field-label {
+      font-weight: bold;
+      color: #444;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+    .text-box {
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 8px;
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .response-box {
+      background: #fff;
+      border: 2px solid #4285F4;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </Style>
+
+  <View className="container">
+
+    <View>
+      <Header value="Question" />
+      <Text name="question" value="$question" />
+    </View>
+
+    <View>
+      <Header value="Passage (what the model was given)" />
+      <Text name="passage" value="$passage" />
+    </View>
+
+    <View>
+      <Header value="Gold Answer (correct answer from IndicQA)" />
+      <Text name="gold_answer" value="$gold_answer" />
+    </View>
+
+    <Separator />
+
+    <View>
+      <Header value="Gemini 2.5 Flash — Response" />
+      <Text name="gemini_response" value="$gemini_response" />
+    </View>
+
+    <Choices name="gemini_label" toName="gemini_response" choice="single" required="true">
+      <Header value="Label Gemini's response:" />
+      <Choice value="correct"
+              hint="Answer is accurate and fully supported by the passage" />
+      <Choice value="hallucinated"
+              hint="Answer contains information NOT present in the passage" />
+      <Choice value="partial"
+              hint="Partially correct but also adds unsupported claims" />
+      <Choice value="refused"
+              hint="Model said it cannot answer / answer not in passage" />
+    </Choices>
+
+    <Separator />
+
+    <View>
+      <Header value="Sarvam-105B — Response" />
+      <Text name="sarvam_response" value="$sarvam_response" />
+    </View>
+
+    <Choices name="sarvam_label" toName="sarvam_response" choice="single" required="true">
+      <Header value="Label Sarvam's response:" />
+      <Choice value="correct"
+              hint="Answer is accurate and fully supported by the passage" />
+      <Choice value="hallucinated"
+              hint="Answer contains information NOT present in the passage" />
+      <Choice value="partial"
+              hint="Partially correct but also adds unsupported claims" />
+      <Choice value="refused"
+              hint="Model said it cannot answer / answer not in passage" />
+    </Choices>
+
+  </View>
+</View>
