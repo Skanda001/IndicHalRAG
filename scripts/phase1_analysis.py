@@ -19,7 +19,14 @@ Output:
 
 import json
 import os
+import sys
 from collections import Counter
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 os.makedirs("results", exist_ok=True)
 os.makedirs("results/phase1_charts", exist_ok=True)

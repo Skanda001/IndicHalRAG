@@ -37,6 +37,13 @@ Output:
 import json
 import os
 import random
+import sys
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 import numpy as np
 
@@ -387,7 +394,7 @@ def train_and_evaluate(
 
     # ── Training loop ─────────────────────────────────────────────────────────
 
-    best_f1 = 0.0
+    best_f1 = -1.0
 
 
     for epoch in range(
