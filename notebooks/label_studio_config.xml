@@ -1,94 +1,110 @@
-<!-- Label Studio XML configuration for HALRAG annotation project -->
-<!-- Import this in Label Studio → Project Settings → Labeling Interface -->
+<!--
+  Label Studio Labeling Interface — HALRAG Hallucination Annotation
+  =================================================================
+
+  HOW TO USE
+  ----------
+  1. Go to your Label Studio project → Settings → Labeling Interface
+  2. Switch to "Code" mode
+  3. Paste this entire XML and click Save
+
+  LABEL DEFINITIONS
+  -----------------
+  correct      → The response correctly answers the question using ONLY the passage.
+  hallucinated → The response contains information NOT present in the passage,
+                 or contradicts the passage.
+  partial      → The response is partly correct but missing key info, or adds
+                 a small amount of unsupported content.
+  refused      → The model said it couldn't answer (e.g., "ಈ ಮಾಹಿತಿ ಪ್ಯಾಸೇಜ್ನಲ್ಲಿ ಇಲ್ಲ.")
+                 when the answer WAS actually in the passage.
+
+  ANNOTATION TASK
+  ---------------
+  For each question you will see:
+    - The PASSAGE (context given to the LLM)
+    - The GOLD ANSWER (correct answer from IndicQA)
+    - GEMINI response → label it
+    - SARVAM response → label it
+
+  Rate BOTH models for every question. Both labels are required.
+-->
 
 <View>
+
+  <!-- ── Styling ─────────────────────────────────────────── -->
   <Style>
-    .container {
-      font-family: Arial, sans-serif;
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .field-label {
-      font-weight: bold;
-      color: #444;
-      margin-top: 12px;
-      margin-bottom: 4px;
-    }
-    .text-box {
-      background: #f8f8f8;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 10px;
-      margin-bottom: 8px;
-      white-space: pre-wrap;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    .response-box {
-      background: #fff;
-      border: 2px solid #4285F4;
-      border-radius: 4px;
-      padding: 10px;
-      margin-bottom: 8px;
-      font-size: 14px;
-      line-height: 1.6;
-    }
+    .container    { font-family: 'Segoe UI', sans-serif; font-size: 14px; }
+    .section      { border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+    .section-q    { background: #f0f4ff; border-left: 4px solid #4A6CF7; }
+    .section-g    { background: #e8f4fd; border-left: 4px solid #4285F4; }
+    .section-s    { background: #fff3ee; border-left: 4px solid #FF6B35; }
+    .label-head   { font-weight: 700; font-size: 13px; text-transform: uppercase;
+                    letter-spacing: 0.5px; color: #555; margin-bottom: 6px; }
+    .gold-ans     { background: #fff9c4; border-radius: 4px; padding: 6px 10px;
+                    font-weight: 600; color: #333; display: inline-block; }
+    .divider      { border: none; border-top: 1px solid #ddd; margin: 8px 0; }
   </Style>
 
   <View className="container">
 
-    <View>
-      <Header value="Question" />
-      <Text name="question" value="$question" />
+    <!-- ── Question + Passage + Gold Answer ─────────────── -->
+    <View className="section section-q">
+      <View className="label-head">Question</View>
+      <Text name="question" value="$question"/>
+
+      <hr className="divider"/>
+
+      <View className="label-head">Passage (given to both models)</View>
+      <Text name="passage" value="$passage"/>
+
+      <hr className="divider"/>
+
+      <View className="label-head">Gold Answer</View>
+      <View className="gold-ans">
+        <Text name="gold_answer" value="$gold_answer"/>
+      </View>
     </View>
 
-    <View>
-      <Header value="Passage (what the model was given)" />
-      <Text name="passage" value="$passage" />
+    <!-- ── Gemini Response ──────────────────────────────── -->
+    <View className="section section-g">
+      <View className="label-head">🔵 Gemini Response</View>
+      <Text name="gemini_text" value="$gemini_response"/>
+
+      <Choices
+        name="gemini_label"
+        toName="gemini_text"
+        choice="single"
+        required="true"
+        requiredMessage="Please label the Gemini response"
+        showInline="true"
+      >
+        <Choice value="correct"      style="background:#d4edda; color:#155724; border-radius:4px; padding:2px 8px;"/>
+        <Choice value="hallucinated" style="background:#f8d7da; color:#721c24; border-radius:4px; padding:2px 8px;"/>
+        <Choice value="partial"      style="background:#fff3cd; color:#856404; border-radius:4px; padding:2px 8px;"/>
+        <Choice value="refused"      style="background:#e2e3e5; color:#383d41; border-radius:4px; padding:2px 8px;"/>
+      </Choices>
     </View>
 
-    <View>
-      <Header value="Gold Answer (correct answer from IndicQA)" />
-      <Text name="gold_answer" value="$gold_answer" />
+    <!-- ── Sarvam Response ──────────────────────────────── -->
+    <View className="section section-s">
+      <View className="label-head">🟠 Sarvam Response</View>
+      <Text name="sarvam_text" value="$sarvam_response"/>
+
+      <Choices
+        name="sarvam_label"
+        toName="sarvam_text"
+        choice="single"
+        required="true"
+        requiredMessage="Please label the Sarvam response"
+        showInline="true"
+      >
+        <Choice value="correct"      style="background:#d4edda; color:#155724; border-radius:4px; padding:2px 8px;"/>
+        <Choice value="hallucinated" style="background:#f8d7da; color:#721c24; border-radius:4px; padding:2px 8px;"/>
+        <Choice value="partial"      style="background:#fff3cd; color:#856404; border-radius:4px; padding:2px 8px;"/>
+        <Choice value="refused"      style="background:#e2e3e5; color:#383d41; border-radius:4px; padding:2px 8px;"/>
+      </Choices>
     </View>
-
-    <Separator />
-
-    <View>
-      <Header value="Gemini 2.5 Flash — Response" />
-      <Text name="gemini_response" value="$gemini_response" />
-    </View>
-
-    <Choices name="gemini_label" toName="gemini_response" choice="single" required="true">
-      <Header value="Label Gemini's response:" />
-      <Choice value="correct"
-              hint="Answer is accurate and fully supported by the passage" />
-      <Choice value="hallucinated"
-              hint="Answer contains information NOT present in the passage" />
-      <Choice value="partial"
-              hint="Partially correct but also adds unsupported claims" />
-      <Choice value="refused"
-              hint="Model said it cannot answer / answer not in passage" />
-    </Choices>
-
-    <Separator />
-
-    <View>
-      <Header value="Sarvam-105B — Response" />
-      <Text name="sarvam_response" value="$sarvam_response" />
-    </View>
-
-    <Choices name="sarvam_label" toName="sarvam_response" choice="single" required="true">
-      <Header value="Label Sarvam's response:" />
-      <Choice value="correct"
-              hint="Answer is accurate and fully supported by the passage" />
-      <Choice value="hallucinated"
-              hint="Answer contains information NOT present in the passage" />
-      <Choice value="partial"
-              hint="Partially correct but also adds unsupported claims" />
-      <Choice value="refused"
-              hint="Model said it cannot answer / answer not in passage" />
-    </Choices>
 
   </View>
+
 </View>

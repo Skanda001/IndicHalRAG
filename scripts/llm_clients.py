@@ -2,27 +2,26 @@
 llm_clients.py
 ==============
 
-Shared LangChain LLM wrappers + prompt for Gemini and Sarvam-30B.
+Shared LangChain LLM wrappers + prompt for Gemini and Sarvam-105B.
 
 This file is NOT run directly. It is imported by generate_responses.py only.
 
 MODELS
 ------
-1. Gemini 2.5 Flash  (Google)
-   - Verified free as of July 2026: 1,500 requests/day, 15 RPM, no card needed
-   - Model string: "gemini-2.5-flash"
-   - Rate limit warning: free tier allows 15 RPM. generate_responses.py
-     adds a 5-second delay between questions so we stay at ~12 RPM.
-     If you get a 429 error, increase DELAY_BETWEEN_REQUESTS below.
+1. Gemini 2.5 Flash Lite  (Google)
+   - Free tier: 20 req/day (very limited). Use pay-as-you-go for full runs.
+   - Enable billing at: https://aistudio.google.com → Get API key → Set up billing
+   - Cost: ~$0.01 total for 500 questions (negligible)
+   - Model string: "gemini-2.5-flash-lite"
 
-2. Sarvam-30B  (Sarvam AI)
+2. Sarvam-105B  (Sarvam AI)
    - Indian company, model trained natively on Kannada
-   - Free ₹100 credits on signup at dashboard.sarvam.ai
+   - Free credits on signup at dashboard.sarvam.ai
    - reasoning_effort=None disables hidden thinking tokens (important!)
 
 SETUP
 -----
-Create .env in project root (run setup.py to do this automatically):
+Create .env in project root:
     GEMINI_API_KEY=your_gemini_key_from_aistudio.google.com
     SARVAM_API_KEY=your_key_from_dashboard.sarvam.ai
 """
@@ -39,7 +38,6 @@ load_dotenv()
 
 # ── Output token budget ────────────────────────────────────────────────
 # 300 tokens = enough for 2-4 complete Kannada sentences.
-# (Old bug was MAX_NEW_TOKENS=24, which cut answers after ~6 words.)
 MAX_OUTPUT_TOKENS = 300
 
 # ── Rate limit safety delay (seconds between each question) ───────────
@@ -51,8 +49,7 @@ DELAY_BETWEEN_REQUESTS = 5   # used in generate_responses.py
 
 # ── Shared prompt (written in Kannada) ────────────────────────────────
 # Same prompt sent to BOTH models so the comparison is fair.
-# All instructions are in Kannada — mixing English instructions with
-# Kannada passages caused code-switched / off-target answers before.
+# All instructions in Kannada — mixing English caused code-switching.
 QA_PROMPT = PromptTemplate.from_template(
     """ನೀವು ಕೆಳಗಿನ ಪ್ಯಾಸೇಜ್ ಅನ್ನು ಮಾತ್ರ ಆಧರಿಸಿ ಪ್ರಶ್ನೆಗೆ ಉತ್ತರಿಸಬೇಕು.
 
@@ -71,17 +68,18 @@ QA_PROMPT = PromptTemplate.from_template(
 )
 
 
-# ── Gemini 2.5 Flash ──────────────────────────────────────────────────
+# ── Gemini 2.5 Flash Lite ─────────────────────────────────────────────
+# Free tier: 20 req/day. Enable pay-as-you-go for unlimited (~$0.01 total).
 def get_gemini_llm() -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-3.5-flash-lite",
         google_api_key=os.getenv("GEMINI_API_KEY"),
         temperature=0.0,
         max_output_tokens=MAX_OUTPUT_TOKENS,
     )
 
 
-# ── Sarvam-30B ────────────────────────────────────────────────────────
+# ── Sarvam-105B ────────────────────────────────────────────────────────
 class SarvamLLM(LLM):
     model: str = "sarvam-105b"
     api_key: Optional[str] = None

@@ -27,6 +27,13 @@ Each person imports their assigned JSON file into their own Label Studio project
 import json
 import random
 import os
+import sys
+
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 INPUT_PATH   = "data/kannada_llm_outputs.json"
 OUTPUT_DIR   = "data/annotation"
