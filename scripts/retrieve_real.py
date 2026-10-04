@@ -27,6 +27,12 @@ import os
 import sys
 import time
 
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import faiss
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
