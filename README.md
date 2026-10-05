@@ -45,12 +45,12 @@ While frontier LLMs excel at high-resource English question answering, Retrieval
 ### Phase 1: Gold Context Hallucination & Label Distribution
 | Label Distribution Across 493 Annotated Samples | Hallucination Rate Comparison |
 |:---:|:---:|
-| ![Label Distribution](results/phase1_charts/label_distribution.png) | ![Hallucination Rate](results/phase1_charts/hallucination_rate.png) |
+| ![Label Distribution](assets/label_distribution.png) | ![Hallucination Rate](assets/hallucination_rate.png) |
 
 ### Phase 2: Open-Domain Real RAG vs. Gold Context
 | Phase 1 vs Phase 2 Context Shift | Hallucination Distribution by Retrieval Quality |
 |:---:|:---:|
-| ![Phase 1 vs Phase 2](results/phase2_charts/phase1_vs_phase2.png) | ![Hallucination by Retrieval](results/phase2_charts/hallucination_by_retrieval.png) |
+| ![Phase 1 vs Phase 2](assets/phase1_vs_phase2.png) | ![Hallucination by Retrieval](assets/hallucination_by_retrieval.png) |
 
 ---
 

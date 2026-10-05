@@ -38,6 +38,8 @@ data/
 # Generated results
 # =========================
 results/
+!results/**/*.png
+!results/**/*.json
 
 # =========================
 # Annotation files
