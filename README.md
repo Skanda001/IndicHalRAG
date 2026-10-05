@@ -48,7 +48,7 @@ While frontier LLMs excel at high-resource English question answering, Retrieval
 | ![Label Distribution](assets/label_distribution.png) | ![Hallucination Rate](assets/hallucination_rate.png) |
 
 ### Phase 2: Open-Domain Real RAG vs. Gold Context
-| Phase 1 vs Phase 2 Context Shift | Hallucination Distribution by Retrieval Quality |
+| Phase 1 vs Phase 2: Faithfulness & Refusal Trade-off | Model Response Dynamics by Retrieval Outcome |
 |:---:|:---:|
 | ![Phase 1 vs Phase 2](assets/phase1_vs_phase2.png) | ![Hallucination by Retrieval](assets/hallucination_by_retrieval.png) |
 
