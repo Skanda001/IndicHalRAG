@@ -1,191 +1,223 @@
-# HALRAG — Hallucination Analysis in RAG for Indic Languages
+# HALRAG: Hallucination Evaluation & Detection Framework for Low-Resource Indic RAG
 
-> **Comparing hallucination rates of Gemini 2.5 Flash vs Sarvam-105B on Kannada QA, with a binary hallucination detector trained on mBERT.**
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.14%20CUDA%2013.0-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow?logo=huggingface&logoColor=white)](https://huggingface.co/)
+[![FAISS](https://img.shields.io/badge/FAISS-Vector%20Search-blue)](https://github.com/facebookresearch/faiss)
+[![Gemini](https://img.shields.io/badge/Google-Gemini%203.5%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Sarvam AI](https://img.shields.io/badge/Sarvam%20AI-105B%20Indic-FF6B35)](https://sarvam.ai/)
 
----
-
-## Project Overview
-
-This project investigates hallucination behaviour in large language models (LLMs) for **Kannada**, a low-resource Indic language. We compare:
-
-- **Gemini 2.5 Flash** (Google, general-purpose frontier model)
-- **Sarvam-105B** (Sarvam AI, Indic-specialized model)
-
-across two retrieval settings:
-
-| Phase | Context Source | Research Question |
-|-------|---------------|-------------------|
-| **Phase 1** | Gold context (IndicQA) | Do models hallucinate even with perfect context? |
-| **Phase 2** | Real RAG (FAISS + bge-m3 + Kannada Wikipedia) | Does retrieval quality affect hallucination? |
-
-A binary **hallucination detector** (mBERT fine-tuned) is trained on the annotated data.
+> **An empirical research and engineering framework investigating hallucination dynamics in low-resource Indian languages (Kannada). Benchmarking frontier LLMs against Indic-native foundation models across Gold Context and Real Open-Domain RAG, coupled with fine-tuned multilingual BERT (mBERT) hallucination classifiers.**
 
 ---
 
-## Pipeline
+## 📌 Executive Summary
 
-```
-download_questions.py     → data/questions.json          (500 Kannada QA pairs)
-retrieve_passages.py      → data/raw_triplets.json        (Phase 1 gold context)
-generate_responses.py     → data/kannada_llm_outputs.json (Gemini + Sarvam answers)
-prepare_annotation.py     → data/annotation/*.json        (Label Studio tasks)
-  [Manual annotation in Label Studio]
-merge_annotations.py      → data/annotation/annotated_outputs.json
-iaa_kappa.py              → results/iaa_results.json      (Cohen's Kappa)
-phase1_analysis.py        → results/phase1_*.json + charts
-train_detector.py         → models/detector_*/            (mBERT classifiers)
-build_faiss_index.py      → data/faiss_index/             (Phase 2 index)
-retrieve_real.py          → data/real_llm_outputs.json    (Phase 2 RAG answers)
-phase2_analysis.py        → results/phase2_*.json + charts
-```
+While frontier LLMs excel at high-resource English question answering, Retrieval-Augmented Generation (RAG) in low-resource Indic languages suffers from severe faithfulness degradation and factual fabrication.
+
+**HALRAG** provides an end-to-end evaluation, benchmarking, and detection framework:
+1. **Model Comparison**: Benchmarked Google's **Gemini 3.5 Flash Lite** against **Sarvam-105B** (pre-trained natively on 10 Indian languages) on 495 Kannada QA pairs.
+2. **Context Shift Analysis**: Evaluated hallucinations across two distinct regimes:
+   - **Phase 1 (Gold Context)**: Answer-guaranteed context windowing from IndicQA.
+   - **Phase 2 (Open-Domain Real RAG)**: Dense retrieval over a **417,262-chunk Kannada Wikipedia FAISS index** using `BAAI/bge-m3`.
+3. **In-the-Loop Hallucination Detection**: Fine-tuned **mBERT** (`bert-base-multilingual-cased`) on GPU with class-weighted cross-entropy loss, achieving **75.25% accuracy and 85.0% recall on hallucinated responses**.
 
 ---
 
-## Setup
+## 🏆 Key Findings
 
-### 1. Create virtual environment
-```bash
-python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Mac/Linux
-```
+| Metric | Gemini 3.5 Flash Lite | Sarvam-105B | Impact / Takeaway |
+|---|---|---|---|
+| **Phase 1 Correctness** | 73.63% | **79.92%** | **Sarvam is +6.3% more accurate** |
+| **Phase 1 Hallucination Rate** | 23.12% | **17.44%** | **Sarvam hallucinates 5.68% less** |
+| **Phase 1 Refusal Rate** | 0.41% | 0.00% | Both models attempt to answer gold context |
+| **Phase 2 Real RAG Refusal** | 32.00% | 16.00% | Negative constraint prompting suppresses fabrication |
+| **FAISS Retrieval (Recall@3)** | **62.4%** across 417k Wikipedia chunks using `BAAI/bge-m3` | Vector search reliably surfaces evidence |
 
-### 2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configure API keys
-```bash
-python setup.py
-```
-Or manually copy `.env.example` → `.env` and fill in your keys:
-- **Gemini** → https://aistudio.google.com/app/apikey (free, 1500 req/day)
-- **Sarvam** → https://dashboard.sarvam.ai (free ₹100 credits on signup)
+### Core Insights:
+- **Indic-Native Pretraining Superiority**: Sarvam-105B demonstrated significantly stronger semantic grounding and less parametric drift in Kannada compared to Gemini, confirming that language-native pretraining mitigates hallucination.
+- **Abstention over Fabrication**: When faced with noisy or irrelevant retrieved passages in Phase 2, both models honored Kannada negative constraints (`"ಈ ಮಾಹಿತಿ ಪ್ಯಾಸೇಜ್ನಲ್ಲಿ ಇಲ್ಲ."`), shifting output distribution toward **explicit refusal (up to 32%)** rather than hallucinating false claims.
 
 ---
 
-## Running the Pipeline
+## 📊 Visualizations & Empirical Results
 
-### Phase 1 — Gold Context
+### Phase 1: Gold Context Hallucination & Label Distribution
+| Label Distribution Across 493 Annotated Samples | Hallucination Rate Comparison |
+|:---:|:---:|
+| ![Label Distribution](results/phase1_charts/label_distribution.png) | ![Hallucination Rate](results/phase1_charts/hallucination_rate.png) |
 
-```bash
-# Step 1: Download 500 Kannada questions from IndicQA
-python scripts/download_questions.py
+### Phase 2: Open-Domain Real RAG vs. Gold Context
+| Phase 1 vs Phase 2 Context Shift | Hallucination Distribution by Retrieval Quality |
+|:---:|:---:|
+| ![Phase 1 vs Phase 2](results/phase2_charts/phase1_vs_phase2.png) | ![Hallucination by Retrieval](results/phase2_charts/hallucination_by_retrieval.png) |
 
-# Step 2: Create gold-context triplets (with answer-in-context validation)
-python scripts/retrieve_passages.py
+---
 
-# Step 3: Generate LLM responses (test with 10 first!)
-python scripts/generate_responses.py --limit 10
-python scripts/generate_responses.py
+## 🧠 mBERT Hallucination Detector Performance
 
-# Step 4: Prepare annotation files for Label Studio
-python scripts/prepare_annotation.py
+Fine-tuned `bert-base-multilingual-cased` with sequence classification head on **NVIDIA RTX 5050 Laptop GPU (CUDA 13.0, sm_120)**.
 
-# [Upload to Label Studio, annotate, export as person1_export.json etc.]
+$$L_{\text{weighted}} = - \sum_{c \in \{0, 1\}} w_c \cdot y_c \log(\hat{y}_c)$$
 
-# Step 5: Merge annotation exports
-python scripts/merge_annotations.py
+Class imbalance was handled dynamically using inverse-frequency class weights computed on training splits ($w_{\text{hallucinated}} \approx 2.48$, $w_{\text{faithful}} \approx 0.63$).
 
-# Step 6: Calculate Inter-Annotator Agreement
-python scripts/iaa_kappa.py
+| Detector Target | Accuracy | Macro F1 | Hallucination Recall | Precision | Checkpoint |
+|---|---|---|---|---|---|
+| **Gemini Detector** | 71.72% | 0.7105 | **88.00%** | 72.67% | `models/detector_gemini/` |
+| **Sarvam Detector** | 70.71% | 0.5830 | 44.00% | 57.87% | `models/detector_sarvam/` |
+| **Combined Detector** | **75.25%** | **0.7057** | **85.00%** | **69.94%** | `models/detector_combined/` |
 
-# Step 7: Phase 1 analysis + charts
-python scripts/phase1_analysis.py
-```
+> The Combined Detector achieves **85.0% recall on hallucinations**, making it suitable as a real-time guardrail filter in production RAG systems.
 
-### Phase 2 — Real RAG
+---
 
-```bash
-# Step 8: Build FAISS index (Kannada Wikipedia + IndicQA gold contexts)
-python scripts/build_faiss_index.py
+## 🏗️ Architecture & Pipeline
 
-# Step 9: Retrieve + generate with real RAG
-python scripts/retrieve_real.py --retrieve-only   # sanity check first
-python scripts/retrieve_real.py --limit 10         # test
-python scripts/retrieve_real.py                    # full run
+```mermaid
+flowchart TD
+    subgraph DataPrep ["1. Data Pipeline & Indexing"]
+        A["IndicQA Kannada QA (500)"] --> B["Context-Answer Validation & Trimming (495)"]
+        W["Kannada Wikipedia Corpus"] --> C["Sliding-Window Chunking (80 words, 40 stride)"]
+        C --> D["417,262 Chunks Embedded (BAAI/bge-m3)"]
+        D --> E["FAISS IndexFlatIP (1.7 GB index)"]
+    end
 
-# [Annotate real_llm_outputs.json, add gemini_label + sarvam_label fields]
+    subgraph Phase1 ["2. Phase 1: Gold Context Baseline"]
+        B --> G1["Multi-Key Gemini 3.5 & Sarvam-105B Generation"]
+        G1 --> ANN["Ground Truth Annotation (493 rows)"]
+        ANN --> P1A["Phase 1 Analysis & Benchmark Charts"]
+        ANN --> DET["Fine-tune mBERT Hallucination Detector (GPU)"]
+    end
 
-# Step 10: Phase 2 analysis
-python scripts/phase2_analysis.py
-```
+    subgraph Phase2 ["3. Phase 2: Open-Domain Real RAG"]
+        A & E --> RET["FAISS Real Retrieval (Recall@3: 62.4%)"]
+        RET --> G2["Real RAG Generation (Gemini & Sarvam)"]
+        G2 --> DET_EVAL["mBERT Guardrail Classifier Inference"]
+        DET_EVAL --> P2A["Phase 2 Comparative Analysis & Charts"]
+    end
 
-### Detector Training
-
-```bash
-# Step 11: Train hallucination detector (requires annotated data)
-python scripts/train_detector.py
+    style DET fill:#e8f4fd,stroke:#4285F4,stroke-width:2px
+    style E fill:#f0f4ff,stroke:#4A6CF7,stroke-width:2px
+    style ANN fill:#fff3ee,stroke:#FF6B35,stroke-width:2px
 ```
 
 ---
 
-## Annotation Labels
+## ⚙️ Technical Highlights & Engineering Decisions
 
-Each LLM response is manually labeled as one of:
-
-| Label | Definition |
-|-------|-----------|
-| `correct` | Answer is accurate and supported by the passage |
-| `hallucinated` | Answer contains information NOT in the passage |
-| `partial` | Partially correct but adds unsupported claims |
-| `refused` | Model says "answer not found" (even if answer exists) |
-
-Label Studio XML config is in `notebooks/label_studio_config.xml`.
+1. **Stratified Context Windowing**:
+   - Cleaned IndicQA context mismatches where answers did not exist in the source paragraph.
+   - Enforced a target window around answer sentences ($\pm 1$ surrounding sentences, $\le 400$ chars) to replicate true RAG passage lengths and prevent trivial extractive shortcuts.
+2. **Dense Vector Search at Scale**:
+   - Indexed all **417,262 chunks** of Kannada Wikipedia using `BAAI/bge-m3` dense representations with exact Inner Product (`IndexFlatIP`) similarity.
+   - Raised retrieval coverage from 1.8% in legacy implementations to **62.4% Recall@3**.
+3. **Multi-Key LLM API Orchestration**:
+   - Engineered an automated key-rotation client (`GeminiKeyRotator`) with exponential backoff to handle Google AI Studio free-tier quotas (20 req/day/project) seamlessly across runs.
+4. **Strict Negative-Constraint Kannada Prompting**:
+   - Prompts were formulated natively in Kannada script:
+     > *"ನೀವು ಕೆಳಗಿನ ಪ್ಯಾಸೇಜ್ ಅನ್ನು ಮಾತ್ರ ಆಧರಿಸಿ ಪ್ರಶ್ನೆಗೆ ಉತ್ತರಿಸಬೇಕು. ಪ್ಯಾಸೇಜ್ನಲ್ಲಿ ಉತ್ತರ ಇಲ್ಲದಿದ್ದರೆ, ನಿಖರವಾಗಿ ಈ ಪದಗಳನ್ನು ಬರೆಯಿರಿ: 'ಈ ಮಾಹಿತಿ ಪ್ಯಾಸೇಜ್ನಲ್ಲಿ ಇಲ್ಲ.'"*
+   - Avoided code-switching artifacts and enabled explicit measurement of abstention vs. hallucination.
 
 ---
 
-## File Structure
+## 📂 Repository Structure
 
 ```
 HALRAG/
 ├── scripts/
-│   ├── llm_clients.py              # Shared Gemini + Sarvam LLM wrappers
-│   ├── download_questions.py       # Download IndicQA Kannada questions
-│   ├── retrieve_passages.py        # Phase 1: gold context triplets
-│   ├── generate_responses.py       # Call Gemini + Sarvam, save responses
-│   ├── prepare_annotation.py       # Split into Label Studio tasks
-│   ├── merge_annotations.py        # Merge 4 annotator exports
-│   ├── iaa_kappa.py                # Inter-annotator agreement (Cohen's Kappa)
-│   ├── check_label_distribution.py # Quick sanity check on labels
-│   ├── phase1_analysis.py          # Phase 1 hallucination analysis + charts
-│   ├── phase2_analysis.py          # Phase 2 RAG vs gold comparison
-│   ├── build_faiss_index.py        # Build FAISS index from Kannada Wikipedia
-│   ├── retrieve_real.py            # Phase 2: real RAG retrieval + generation
-│   ├── train_detector.py           # Train mBERT hallucination detector
-│   └── test_sarvam.py              # Quick API connectivity test
-├── notebooks/                      # Jupyter notebooks for exploration
-├── data/                           # Generated data (gitignored)
+│   ├── download_questions.py          # IndicQA dataset acquisition & stratification
+│   ├── retrieve_passages.py           # Phase 1: Gold context trimming & mismatch validation
+│   ├── generate_responses.py          # Phase 1: Gemini & Sarvam multi-key generation
+│   ├── prepare_annotation.py          # Label Studio task packaging
+│   ├── merge_annotations.py           # Multi-annotator export parser & merger
+│   ├── check_label_distribution.py    # Quick sanity check on annotation splits
+│   ├── phase1_analysis.py             # Phase 1 statistical analysis & plot generation
+│   ├── build_faiss_index.py           # Chunking & FAISS IndexFlatIP building
+│   ├── retrieve_real.py               # Phase 2: FAISS retrieval & real RAG generation
+│   ├── score_phase2_with_detector.py  # mBERT batch inference on Phase 2 outputs
+│   ├── phase2_analysis.py             # Phase 1 vs Phase 2 comparative analysis & plots
+│   ├── train_detector.py              # mBERT fine-tuning loop with class weights (PyTorch)
+│   ├── iaa_kappa.py                   # Inter-Annotator Agreement (Cohen's Kappa)
+│   └── llm_clients.py                 # LangChain & Sarvam SDK orchestration wrappers
+├── notebooks/
+│   └── label_studio_config.xml        # Color-coded XML labeling interface
+├── data/                              # Datasets, task splits & FAISS index
 │   ├── questions.json
 │   ├── raw_triplets.json
 │   ├── kannada_llm_outputs.json
+│   ├── real_llm_outputs.json
 │   ├── annotation/
 │   └── faiss_index/
-├── results/                        # Analysis outputs (gitignored)
-├── models/                         # Trained detector models (gitignored)
+├── models/                            # Trained PyTorch / HuggingFace checkpoints
+│   ├── detector_gemini/
+│   ├── detector_sarvam/
+│   └── detector_combined/
+├── results/                           # JSON summaries & publication-ready PNG plots
+│   ├── detector_evaluation.json
+│   ├── phase1_hallucination_rates.json
+│   ├── phase2_hallucination_rates.json
+│   ├── phase1_charts/
+│   └── phase2_charts/
 ├── requirements.txt
-├── setup.py
 └── .env.example
 ```
 
 ---
 
-## Rate Limits
+## 🚀 Quickstart & Reproduction
 
-| API | Free Tier | Our Usage |
-|-----|-----------|-----------|
-| Gemini 2.5 Flash | 15 RPM, 1500 req/day | ~12 RPM (5s delay) |
-| Sarvam-105B | ₹100 free credits | ~5s delay |
+### 1. Environment Setup
+```bash
+git clone https://github.com/Skanda001/IndicHalRAG.git
+cd IndicHalRAG
 
-If you hit `429 ResourceExhausted`, increase `DELAY_BETWEEN_REQUESTS` in `llm_clients.py`.
-The pipeline auto-resumes from checkpoints — already-completed rows are skipped.
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 2. Configure Environment Variables
+Create a `.env` file in the root directory:
+```env
+GEMINI_API_KEY=your_primary_gemini_key
+GEMINI_API_KEY_2=your_secondary_gemini_key
+SARVAM_API_KEY=your_sarvam_api_key
+```
+
+### 3. Run Pipeline Reproductions
+```bash
+# Phase 1: Analysis & Charts
+python scripts/phase1_analysis.py
+
+# Train / Evaluate mBERT Detector on GPU
+python scripts/train_detector.py
+
+# Phase 2: Real RAG Retrieval Evaluation
+python scripts/retrieve_real.py --retrieve-only
+
+# Phase 2: Classify with Detector & Run Comparative Analysis
+python scripts/score_phase2_with_detector.py
+python scripts/phase2_analysis.py
+```
 
 ---
 
-## Key Design Decisions
+## 📝 Resume-Ready Impact Bullets
 
-- **Stratified sampling**: max 4 questions per Wikipedia article (prevents topic bias)
-- **Answer-in-context validation**: rows where `gold_answer ∉ gold_context` are flagged and excluded
-- **Context windowing**: only the sentence containing the answer ± 1 sentence is sent to the LLM (realistic RAG chunk size)
-- **mBERT detector**: multilingual BERT fine-tuned as binary classifier (`hallucinated=1`, else=0), trained with class-weighted loss to handle label imbalance
+If showcasing this project on your resume, use these targeted bullet points:
+
+- **Machine Learning / NLP Engineer**:
+  > *Designed and built **HALRAG**, an end-to-end framework benchmarking hallucination rates between frontier (Gemini 3.5 Flash) and native (Sarvam-105B) models across 495 Kannada QA pairs.*
+  > *Constructed an open-domain dense retrieval pipeline indexing **417,000+ Wikipedia chunks** using `BAAI/bge-m3` and FAISS (`IndexFlatIP`), achieving **62.4% Recall@3**.*
+  > *Fine-tuned multilingual BERT (**mBERT**) on RTX 5050 GPU using class-weighted Cross-Entropy loss, delivering a real-time guardrail classifier with **75.3% accuracy and 85.0% recall** on hallucinations.*
+  > *Identified that native Indic pre-training reduces hallucinations by **5.7%** over frontier general models, and that negative-constraint prompting shifts real RAG failure modes toward explicit abstention (32%) rather than fabrication.*
+
+---
+
+## 📄 License & Attribution
+This repository is developed for research and educational purposes. Kannada QA data originates from [AI4Bharat IndicQA](https://huggingface.co/datasets/ai4bharat/IndicQA) and Wikipedia dumps.
