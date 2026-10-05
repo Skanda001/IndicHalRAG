@@ -172,72 +172,141 @@ try:
     import matplotlib.pyplot as plt
     import numpy as np
 
-    # Chart 1 — Phase 1 vs Phase 2 hallucination comparison
-    if p1_gemini_halluc is not None:
-        fig, ax = plt.subplots(figsize=(9, 6))
+    # ─────────────────────────────────────────────────────────────────
+    # Chart 1: Phase 1 vs Phase 2 Complete Response Dynamics
+    # ─────────────────────────────────────────────────────────────────
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5.5), sharey=True)
 
-        x = np.arange(2)  # Gemini, Sarvam
-        width = 0.3
+    metrics = ["Correct", "Hallucinated", "Refused"]
+    x = np.arange(len(metrics))
+    width = 0.35
 
-        phase1_vals = [p1_gemini_halluc, p1_sarvam_halluc]
-        phase2_vals = [p2_gemini_halluc, p2_sarvam_halluc]
+    # Phase 1 values
+    p1_g = [
+        p1["gemini"]["correct"]["percentage"],
+        p1["gemini"]["hallucinated"]["percentage"],
+        p1["gemini"]["refused"]["percentage"]
+    ] if os.path.exists(P1_PATH) else [73.6, 23.1, 0.4]
 
-        bars1 = ax.bar(x - width/2, phase1_vals, width,
-                       label="Phase 1 (Gold Context)", color="#4285F4", alpha=0.85)
-        bars2 = ax.bar(x + width/2, phase2_vals, width,
-                       label="Phase 2 (Real RAG)", color="#EA4335", alpha=0.85)
+    p1_s = [
+        p1["sarvam"]["correct"]["percentage"],
+        p1["sarvam"]["hallucinated"]["percentage"],
+        p1["sarvam"]["refused"]["percentage"]
+    ] if os.path.exists(P1_PATH) else [79.9, 17.4, 0.0]
 
-        ax.set_ylabel("Hallucination Rate (%)", fontsize=12)
-        ax.set_title("Phase 1 vs Phase 2: Hallucination Rate\nGold Context vs Real RAG Retrieval",
-                     fontsize=13, fontweight="bold")
-        ax.set_xticks(x)
-        ax.set_xticklabels(["Gemini 2.5 Flash", "Sarvam-105B"], fontsize=12)
-        ax.legend(fontsize=11)
-        ax.set_ylim(0, max(max(phase1_vals), max(phase2_vals)) + 15)
+    # Phase 2 values
+    p2_g = [
+        pct(gemini_counts.get("correct", 0), total),
+        pct(gemini_counts.get("hallucinated", 0), total),
+        pct(gemini_counts.get("refused", 0), total)
+    ]
+    p2_s = [
+        pct(sarvam_counts.get("correct", 0), total),
+        pct(sarvam_counts.get("hallucinated", 0), total),
+        pct(sarvam_counts.get("refused", 0), total)
+    ]
 
-        for bar in bars1 + bars2:
-            h = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., h + 0.5,
-                    f"{h:.1f}%", ha="center", va="bottom", fontsize=10, fontweight="bold")
+    # Subplot 1: Gemini
+    b1_g = ax1.bar(x - width/2, p1_g, width, label="Phase 1 (Gold Context)", color="#4285F4", alpha=0.85)
+    b2_g = ax1.bar(x + width/2, p2_g, width, label="Phase 2 (Real RAG)", color="#EA4335", alpha=0.85)
+    ax1.set_title("Gemini 3.5 Flash Lite", fontsize=13, fontweight="bold")
+    ax1.set_ylabel("Response Percentage (%)", fontsize=11)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(metrics, fontsize=11)
+    ax1.set_ylim(0, 100)
+    ax1.grid(axis="y", linestyle="--", alpha=0.3)
+    ax1.legend(fontsize=10)
 
-        plt.tight_layout()
-        plt.savefig("results/phase2_charts/phase1_vs_phase2.png", dpi=150)
-        plt.close()
-        print("✅ Chart saved → results/phase2_charts/phase1_vs_phase2.png")
+    for bar in b1_g + b2_g:
+        h = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., h + 1.2,
+                 f"{h:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
 
-    # Chart 2 — Hallucination by retrieval success
+    # Subplot 2: Sarvam
+    b1_s = ax2.bar(x - width/2, p1_s, width, label="Phase 1 (Gold Context)", color="#4285F4", alpha=0.85)
+    b2_s = ax2.bar(x + width/2, p2_s, width, label="Phase 2 (Real RAG)", color="#FF6B35", alpha=0.85)
+    ax2.set_title("Sarvam-105B (Indic Native)", fontsize=13, fontweight="bold")
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(metrics, fontsize=11)
+    ax2.set_ylim(0, 100)
+    ax2.grid(axis="y", linestyle="--", alpha=0.3)
+    ax2.legend(fontsize=10)
+
+    for bar in b1_s + b2_s:
+        h = bar.get_height()
+        ax2.text(bar.get_x() + bar.get_width()/2., h + 1.2,
+                 f"{h:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
+
+    fig.suptitle("Phase 1 vs Phase 2: Faithfulness, Hallucination & Refusal Trade-off\n(Gold Context vs Real RAG Open-Domain Retrieval)",
+                 fontsize=14, fontweight="bold", y=1.03)
+
+    plt.tight_layout()
+    plt.savefig("results/phase2_charts/phase1_vs_phase2.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("✅ Chart saved → results/phase2_charts/phase1_vs_phase2.png")
+
+    # ─────────────────────────────────────────────────────────────────
+    # Chart 2: Refusal & Faithfulness by Retrieval Success
+    # ─────────────────────────────────────────────────────────────────
     if gold_retrieved and gold_not_retrieved:
-        def model_halluc_rate(rows, label_key):
-            c = Counter(r.get(label_key) for r in rows)
-            t = len(rows)
-            return pct(c.get("hallucinated", 0), t)
+        fig, (ax_ref, ax_cor) = plt.subplots(1, 2, figsize=(13, 5.5), sharey=True)
 
-        cats = ["Gold Retrieved", "Gold NOT Retrieved"]
-        g_rates = [model_halluc_rate(gold_retrieved, "gemini_label"),
-                   model_halluc_rate(gold_not_retrieved, "gemini_label")]
-        s_rates = [model_halluc_rate(gold_retrieved, "sarvam_label"),
-                   model_halluc_rate(gold_not_retrieved, "sarvam_label")]
+        cats = ["Evidence Retrieved\n(N=26)", "Evidence Missing\n(N=15)"]
+        x_c = np.arange(len(cats))
+        w = 0.32
 
-        fig, ax = plt.subplots(figsize=(9, 6))
-        x = np.arange(len(cats))
-        bars1 = ax.bar(x - width/2, g_rates, width, label="Gemini", color="#4285F4", alpha=0.85)
-        bars2 = ax.bar(x + width/2, s_rates, width, label="Sarvam", color="#FF6B35", alpha=0.85)
+        def get_rate(rows, model_key, label_val):
+            c = Counter(r.get(model_key) for r in rows)
+            return pct(c.get(label_val, 0), len(rows))
 
-        ax.set_ylabel("Hallucination Rate (%)", fontsize=12)
-        ax.set_title("Hallucination Rate by Retrieval Success\n(Does retrieval quality affect hallucination?)",
-                     fontsize=13, fontweight="bold")
-        ax.set_xticks(x)
-        ax.set_xticklabels(cats, fontsize=11)
-        ax.legend(fontsize=11)
-        ax.set_ylim(0, 100)
+        # Refusal rates
+        g_ref = [get_rate(gold_retrieved, "gemini_label", "refused"),
+                 get_rate(gold_not_retrieved, "gemini_label", "refused")]
+        s_ref = [get_rate(gold_retrieved, "sarvam_label", "refused"),
+                 get_rate(gold_not_retrieved, "sarvam_label", "refused")]
 
-        for bar in bars1 + bars2:
+        # Correct rates
+        g_cor = [get_rate(gold_retrieved, "gemini_label", "correct"),
+                 get_rate(gold_not_retrieved, "gemini_label", "correct")]
+        s_cor = [get_rate(gold_retrieved, "sarvam_label", "correct"),
+                 get_rate(gold_not_retrieved, "sarvam_label", "correct")]
+
+        # Panel 1: Refusal (Abstention)
+        b_rg = ax_ref.bar(x_c - w/2, g_ref, w, label="Gemini 3.5 Flash", color="#4285F4", alpha=0.85)
+        b_rs = ax_ref.bar(x_c + w/2, s_ref, w, label="Sarvam-105B", color="#FF6B35", alpha=0.85)
+        ax_ref.set_title("Explicit Refusal Rate (%)\n(Higher = More Honest Abstention)", fontsize=12, fontweight="bold")
+        ax_ref.set_ylabel("Percentage (%)", fontsize=11)
+        ax_ref.set_xticks(x_c)
+        ax_ref.set_xticklabels(cats, fontsize=11)
+        ax_ref.set_ylim(0, 100)
+        ax_ref.grid(axis="y", linestyle="--", alpha=0.3)
+        ax_ref.legend(fontsize=10)
+
+        for bar in b_rg + b_rs:
             h = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., h + 0.5,
-                    f"{h:.1f}%", ha="center", va="bottom", fontsize=9)
+            ax_ref.text(bar.get_x() + bar.get_width()/2., h + 1.2,
+                        f"{h:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
+
+        # Panel 2: Correctness (Faithfulness)
+        b_cg = ax_cor.bar(x_c - w/2, g_cor, w, label="Gemini 3.5 Flash", color="#4285F4", alpha=0.85)
+        b_cs = ax_cor.bar(x_c + w/2, s_cor, w, label="Sarvam-105B", color="#FF6B35", alpha=0.85)
+        ax_cor.set_title("Faithful Correctness Rate (%)\n(Accuracy under Retrieval)", fontsize=12, fontweight="bold")
+        ax_cor.set_xticks(x_c)
+        ax_cor.set_xticklabels(cats, fontsize=11)
+        ax_cor.set_ylim(0, 100)
+        ax_cor.grid(axis="y", linestyle="--", alpha=0.3)
+        ax_cor.legend(fontsize=10)
+
+        for bar in b_cg + b_cs:
+            h = bar.get_height()
+            ax_cor.text(bar.get_x() + bar.get_width()/2., h + 1.2,
+                        f"{h:.1f}%", ha="center", va="bottom", fontsize=9, fontweight="bold")
+
+        fig.suptitle("Phase 2: Response Behavior Conditioned on FAISS Retrieval Success\n(How models react when evidence is retrieved vs missing)",
+                     fontsize=14, fontweight="bold", y=1.03)
 
         plt.tight_layout()
-        plt.savefig("results/phase2_charts/hallucination_by_retrieval.png", dpi=150)
+        plt.savefig("results/phase2_charts/hallucination_by_retrieval.png", dpi=150, bbox_inches="tight")
         plt.close()
         print("✅ Chart saved → results/phase2_charts/hallucination_by_retrieval.png")
 
